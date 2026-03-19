@@ -16,20 +16,32 @@ Ask me these questions one at a time. Don't move on until each is answered:
 3. How does the API authenticate? (e.g., "API key in x-api-key header", "Bearer token", "OAuth2" — if you're not sure, say so and I'll try to find it in the docs)
 4. Do you already have an API key/token I should use? What environment variable name do you want for it? (e.g., ACME_API_TOKEN)
 5. Are there any scoping concepts like org IDs, workspace IDs, or tenant IDs that some endpoints require? If so, what env var name?
-6. What do you want to name this project? (e.g., acme-mcp)
+6. What do you want to name this project? Default is mcp_{platform_name} (e.g., mcp_stripe, mcp_addigy). They can pick any name they want.
+7. Which tools do you want? Pick one:
+   a) "I know what I want" — tell me the specific tools you need and I'll build just those
+   b) "I know what I want, but also find more" — tell me your tools, then I'll review the API docs and suggest additional useful ones
+   c) "You tell me" — I'll review the full API docs and propose a complete tool list for you to approve
 
-## Step 2: Analyze the API docs
+## Step 2: Analyze the API docs and propose tools
 
-Once I have the API docs URL, fetch and analyze them. Then present me with:
+Once I have the API docs URL, fetch and analyze them. Present:
 
 - A summary of the API: base URL, auth scheme, rate limits, pagination format
 - Any quirks you notice (trailing slashes required, non-standard response shapes, required query/body params that aren't obvious)
-- A proposed list of MCP tools, grouped by domain area, split into:
+
+Then, based on their answer to question 7:
+
+- **If (a):** Build exactly the tools they asked for. Don't suggest extras.
+- **If (b):** Start with their requested tools, then review the API docs for additional useful endpoints and suggest them. Group suggestions by domain area so they can accept/reject by category.
+- **If (c):** Review the full API docs and propose a complete tool list.
+
+For all options, present tools grouped by domain area, split into:
   - **Read-only tools** (GET/query endpoints — safe to call anytime)
   - **Write/delete tools** (POST/PUT/PATCH/DELETE mutations)
-- For each tool: the name, a one-line description, and the endpoint(s) it wraps
 
-Ask me to approve the tool list, add/remove tools, or adjust groupings before writing any code.
+For each tool: the name, a one-line description, and the endpoint(s) it wraps.
+
+Ask me to approve the tool list, add/remove tools, or adjust groupings before writing any code. They can always ask for more tools later.
 
 ## Step 3: Build it
 
