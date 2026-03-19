@@ -1,17 +1,17 @@
 # mcp-config
 
-Reusable prompts and templates for building MCP (Model Context Protocol) servers with Claude.
-
-## Prompts
-
-| Prompt | Description |
-|--------|-------------|
-| [Build an MCP Server](prompts/build-mcp-server.md) | Template for building a production MCP server from any REST API |
+Reusable prompts for building MCP servers with Claude.
 
 ## Usage
 
-1. Copy a prompt template
-2. Fill in the bracketed sections with your API details
-3. Give it to Claude
+1. Copy the prompt from [prompts/build-mcp-server.md](prompts/build-mcp-server.md)
+2. Paste it into Claude
+3. Answer the questions — Claude handles the rest
 
-See each prompt file for instructions and a worked example.
+All you need is your API's Swagger/OpenAPI docs URL and an API key.
+
+## Prompts
+
+| Prompt | What it does |
+|--------|-------------|
+| [Build an MCP Server](prompts/build-mcp-server.md) | Interactive walkthrough: Claude analyzes your API docs, proposes tools, builds the server, and helps you test it |

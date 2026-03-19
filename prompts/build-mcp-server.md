@@ -1,124 +1,94 @@
 # Build an MCP Server
 
-A reusable prompt template for building a production MCP server from any REST API. Copy the prompt below, fill in the bracketed sections, and give it to Claude.
+Copy the prompt below and give it to Claude. It will walk you through everything interactively — just answer the questions and provide your API docs URL.
 
 ## The Prompt
 
 ```
-Build an MCP (Model Context Protocol) server for [PLATFORM NAME] — a [one-line description of the platform].
+I want to build an MCP (Model Context Protocol) server so an LLM can interact with a REST API. Walk me through this step by step.
 
-## Tech Stack
+## Step 1: Gather info
 
+Ask me these questions one at a time. Don't move on until each is answered:
+
+1. What platform/service is this for? (e.g., "Addigy — Apple device management for IT admins")
+2. What is the URL to the API's Swagger/OpenAPI docs? (e.g., https://api.example.com/docs/swagger.json)
+3. How does the API authenticate? (e.g., "API key in x-api-key header", "Bearer token", "OAuth2" — if you're not sure, say so and I'll try to find it in the docs)
+4. Do you already have an API key/token I should use? What environment variable name do you want for it? (e.g., ACME_API_TOKEN)
+5. Are there any scoping concepts like org IDs, workspace IDs, or tenant IDs that some endpoints require? If so, what env var name?
+6. What do you want to name this project? (e.g., acme-mcp)
+
+## Step 2: Analyze the API docs
+
+Once I have the Swagger/OpenAPI URL, fetch and analyze the spec. Then present me with:
+
+- A summary of the API: base URL, auth scheme, rate limits, pagination format
+- Any quirks you notice (trailing slashes required, non-standard response shapes, required query/body params that aren't obvious)
+- A proposed list of MCP tools, grouped by domain area, split into:
+  - **Read-only tools** (GET/query endpoints — safe to call anytime)
+  - **Write/delete tools** (POST/PUT/PATCH/DELETE mutations)
+- For each tool: the name, a one-line description, and the endpoint(s) it wraps
+
+Ask me to approve the tool list, add/remove tools, or adjust groupings before writing any code.
+
+## Step 3: Build it
+
+Once the tool list is approved, build the full MCP server using this architecture:
+
+### Tech stack
 - Python 3.12+, FastMCP (fastmcp>=2.0.0), httpx for async HTTP, tenacity for retry logic
-- uv for package management (not pip)
+- uv for package management (not pip, not poetry)
 - ruff for linting and formatting
 - pytest + pytest-asyncio + respx for testing
 - Hatchling build backend
-- Package name: [your-package-name] (e.g., acme-mcp), importable as [your_module_name] (e.g., acme_mcp)
 
-## API Details
-
-- Base URL: [https://api.example.com]
-- Auth method: [header name and format, e.g., "x-api-key header" or "Authorization: Bearer"]
-- Auth env var: [ENV_VAR_NAME] (e.g., ACME_API_TOKEN)
-- API docs: [URL to API documentation / Swagger / OpenAPI spec]
-- Rate limit: [e.g., "1,000 requests per 10 seconds"]
-- Pagination format: [describe how the API paginates, e.g., "POST query endpoints return {items, metadata: {page, per_page, total}}"]
-- Other quirks: [e.g., "requires trailing slashes", "some endpoints use org-scoped paths /o/{org_id}/"]
-
-## Environment Variables
-
-- [AUTH_TOKEN_VAR] (required): API key / token
-- [ORG_ID_VAR] (yes/no/recommended): [description]
-- [OTHER_VAR] (optional, default: [value]): [description]
-
-## Tools to Build
-
-Split tools into read-only (safe queries) and write/delete (mutations). Each tool is an
-async function decorated with @mcp.tool(). Annotate with ToolAnnotations(readOnlyHint=True)
-for reads and ToolAnnotations(readOnlyHint=False, destructiveHint=True) for writes.
-
-### Read-only tools
-
-- get_[resource]: [What it queries/returns] — [METHOD /path]
-- get_[resource]: [What it queries/returns] — [METHOD /path]
-
-### Write/delete tools
-
-- manage_[resource]: [Create/update/delete description] — [METHOD /path]
-- [action]_[resource]: [What it does] — [METHOD /path]
-
-## Safety Rules
-
-These get embedded in the FastMCP server instructions and guide LLM behavior:
-
-- Always confirm before executing destructive actions (e.g., [list dangerous operations])
-- When batch-operating on resources, state the count and ask for confirmation
-- [Any domain-specific safety rules]
-
-## Architecture Requirements
-
-1. Project layout: src/[module_name]/ with __init__.py, __main__.py, server.py, client.py, and tools/ subdirectory
-2. Singleton HTTP client: One shared httpx.AsyncClient reused across all tool calls, initialized lazily from env vars
-3. Tool organization: One file per domain area in tools/. Each file imports the shared mcp instance and get_client() from server.py
-4. Tool annotations: Define READ_ONLY and WRITE constants in tools/__init__.py using mcp.types.ToolAnnotations
-5. Retry logic: Use tenacity with exponential backoff for 429 and 5xx responses
-6. Pagination: Client should have a paginate() method. Tools accept page and per_page params so the LLM can navigate pages
-7. Error handling: Return error dicts from tools (not exceptions) — LLMs handle structured errors better than stack traces
-8. Confirmation gates: Destructive actions should require a confirmation parameter (e.g., confirm_delete: bool = False)
-9. CLI entry point: __main__.py with --log-level flag, runs mcp.run(transport="stdio")
-10. Tests: Unit tests for client (auth, pagination, retry) and integration tests for tools (mock HTTP with respx)
-
-## Claude Desktop Configuration
-
-{
-  "mcpServers": {
-    "[server-name]": {
-      "command": "uv",
-      "args": ["run", "--directory", "/path/to/project", "[cli-command-name]"],
-      "env": {
-        "[AUTH_TOKEN_VAR]": "your-token",
-        "[ORG_ID_VAR]": "your-org-id"
-      }
-    }
-  }
-}
+### Project structure
+```
+src/{module_name}/
+├── __init__.py          # Version from importlib.metadata
+├── __main__.py          # CLI entry point: mcp.run(transport="stdio")
+├── server.py            # FastMCP instance, singleton client, get_client()
+├── client.py            # Async HTTP client (httpx), retry logic, pagination
+└── tools/
+    ├── __init__.py      # READ_ONLY and WRITE ToolAnnotation constants
+    ├── {domain1}.py     # One file per domain area
+    ├── {domain2}.py
+    └── ...
 ```
 
-## Example: Filled-in Prompt (Addigy)
+### Architecture rules
+1. **Singleton HTTP client** — one shared httpx.AsyncClient, initialized lazily from env vars
+2. **Tool annotations** — every tool gets `ToolAnnotations(readOnlyHint=True)` or `ToolAnnotations(readOnlyHint=False, destructiveHint=True)`
+3. **Retry logic** — tenacity with exponential backoff for 429 and 5xx
+4. **Pagination** — tools accept page/per_page params; tool docstrings tell the LLM to check for more pages
+5. **Error handling** — return error dicts from tools, not exceptions (LLMs handle structured errors better)
+6. **Confirmation gates** — destructive actions require a `confirm` bool param (e.g., `confirm_wipe: bool = False`)
+7. **Tool docstrings** — include valid enum values, filter options, and pagination hints so the LLM knows how to call each tool correctly
+8. **Safety instructions** — embed in FastMCP server instructions: confirm before destructive ops, state counts before batch ops
 
+### Deliverables
+- All source code
+- pyproject.toml with CLI entry point
+- README with setup instructions, env var reference, and Claude Desktop config snippet
+- Unit tests for client + tools
+- Run ruff check and ruff format before finishing
+
+## Step 4: Test
+
+After building, walk me through testing:
+
+1. How to add the server to Claude Desktop (or Claude Code) config
+2. Test each read-only tool first via the MCP connector
+3. Fix any issues found (auth, pagination, response format quirks)
+4. Apply learnings from read tools to the write tools
+5. Only test write tools if I explicitly ask to
+
+## Important lessons (from building MCP servers before)
+
+- Always fetch and read the actual Swagger spec — don't guess at endpoints, params, or response shapes
+- Every API has undocumented quirks (trailing slashes, required sort params, non-standard auth). Find them during read-only testing before building writes.
+- FastMCP tools can't return bare lists — wrap array responses in a dict
+- Tool docstrings ARE the LLM's documentation. Put enum values, filter formats, and pagination info directly in them.
+- Start with read-only tools, get them passing E2E, then build writes. This order catches API quirks early.
+- Split into PRs by feature area, not one giant PR
 ```
-Build an MCP server for Addigy — an Apple device management (MDM) platform for IT admins
-and MSPs managing macOS, iOS, iPadOS, and tvOS fleets.
-
-Base URL: https://api.addigy.com
-Auth: x-api-key header via ADDIGY_API_TOKEN env var
-Docs: https://api.addigy.com/api/v2/documentation/
-Rate limit: 1,000 requests per 10 seconds
-Pagination: POST query endpoints return {items, metadata: {page, per_page, page_count, total}}
-Quirks: Requires trailing slashes on all paths. Some endpoints are org-scoped
-(/api/v2/o/{org_id}/). Some POST endpoints require sort_direction + sort_field in body.
-
-Read tools: get_devices, get_policies, get_alerts, get_compliance, get_custom_facts,
-get_software, get_mdm_profiles, get_sentinelone, get_end_users, get_community,
-get_variables, get_system_events
-
-Write tools: device_action (lock/wipe/restart/shutdown/assign), manage_alerts,
-manage_compliance, manage_custom_facts, manage_software, manage_policy_items,
-manage_mdm_profiles, manage_sentinelone, manage_end_users, import_community_item,
-manage_variables
-
-Safety: Confirm before wipe/lock/disable. Never wipe without explicit "confirm wipe".
-State device count before batch operations.
-```
-
-## Tips
-
-1. **Start with read-only tools.** Get them working E2E before building writes. Lessons from reads (auth quirks, pagination, required fields) save time on writes.
-2. **Test via Claude Desktop MCP connector.** Add the server to your Claude Desktop config and test each tool interactively — catches issues unit tests miss.
-3. **Provide API docs or Swagger URL.** If the API has OpenAPI/Swagger docs, include the URL so Claude can reference exact endpoint details.
-4. **Be specific about API quirks.** Every API has them — trailing slashes, non-standard auth, weird pagination, unexpectedly named fields. Call these out explicitly.
-5. **Split into PRs by feature area.** Group related tools (e.g., "device management", "alert monitoring") into separate branches and PRs.
-6. **Iterate on tool descriptions.** The tool's docstring becomes its MCP schema description — this is what the LLM reads to decide when/how to use the tool. Make it actionable and specific.
-7. **Include valid enum values in descriptions.** If a param accepts specific values (statuses, categories, actions), list them in the docstring so the LLM knows what to pass.
-8. **Mention pagination in tool descriptions.** Tell the LLM "Results are paginated — check metadata.page_count for more pages" so it fetches additional pages when needed.
