@@ -43,18 +43,17 @@ Once the tool list is approved, build the full MCP server using this architectur
 - Hatchling build backend
 
 ### Project structure
-```
-src/{module_name}/
-├── __init__.py          # Version from importlib.metadata
-├── __main__.py          # CLI entry point: mcp.run(transport="stdio")
-├── server.py            # FastMCP instance, singleton client, get_client()
-├── client.py            # Async HTTP client (httpx), retry logic, pagination
-└── tools/
-    ├── __init__.py      # READ_ONLY and WRITE ToolAnnotation constants
-    ├── {domain1}.py     # One file per domain area
-    ├── {domain2}.py
-    └── ...
-```
+
+    src/{module_name}/
+        __init__.py          — Version from importlib.metadata
+        __main__.py          — CLI entry point: mcp.run(transport="stdio")
+        server.py            — FastMCP instance, singleton client, get_client()
+        client.py            — Async HTTP client (httpx), retry logic, pagination
+        tools/
+            __init__.py      — READ_ONLY and WRITE ToolAnnotation constants
+            {domain1}.py     — One file per domain area
+            {domain2}.py
+            ...
 
 ### Architecture rules
 1. **Singleton HTTP client** — one shared httpx.AsyncClient, initialized lazily from env vars
