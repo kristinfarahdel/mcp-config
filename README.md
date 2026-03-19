@@ -8,7 +8,7 @@ Reusable prompts for building MCP servers with Claude.
 2. Paste it into Claude
 3. Answer the questions — Claude handles the rest
 
-All you need is your API's Swagger/OpenAPI docs URL and an API key.
+All you need is a link to your API docs and an API key.
 
 ## Prompts
 

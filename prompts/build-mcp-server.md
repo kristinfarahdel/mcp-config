@@ -12,7 +12,7 @@ I want to build an MCP (Model Context Protocol) server so an LLM can interact wi
 Ask me these questions one at a time. Don't move on until each is answered:
 
 1. What platform/service is this for? (e.g., "Addigy — Apple device management for IT admins")
-2. What is the URL to the API's Swagger/OpenAPI docs? (e.g., https://api.example.com/docs/swagger.json)
+2. What is the URL to the API docs? (Swagger/OpenAPI spec, REST API reference, developer docs — whatever you have)
 3. How does the API authenticate? (e.g., "API key in x-api-key header", "Bearer token", "OAuth2" — if you're not sure, say so and I'll try to find it in the docs)
 4. Do you already have an API key/token I should use? What environment variable name do you want for it? (e.g., ACME_API_TOKEN)
 5. Are there any scoping concepts like org IDs, workspace IDs, or tenant IDs that some endpoints require? If so, what env var name?
@@ -20,7 +20,7 @@ Ask me these questions one at a time. Don't move on until each is answered:
 
 ## Step 2: Analyze the API docs
 
-Once I have the Swagger/OpenAPI URL, fetch and analyze the spec. Then present me with:
+Once I have the API docs URL, fetch and analyze them. Then present me with:
 
 - A summary of the API: base URL, auth scheme, rate limits, pagination format
 - Any quirks you notice (trailing slashes required, non-standard response shapes, required query/body params that aren't obvious)
@@ -85,7 +85,7 @@ After building, walk me through testing:
 
 ## Important lessons (from building MCP servers before)
 
-- Always fetch and read the actual Swagger spec — don't guess at endpoints, params, or response shapes
+- Always fetch and read the actual API docs — don't guess at endpoints, params, or response shapes
 - Every API has undocumented quirks (trailing slashes, required sort params, non-standard auth). Find them during read-only testing before building writes.
 - FastMCP tools can't return bare lists — wrap array responses in a dict
 - Tool docstrings ARE the LLM's documentation. Put enum values, filter formats, and pagination info directly in them.
